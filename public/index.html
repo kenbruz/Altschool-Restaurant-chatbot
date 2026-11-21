@@ -1,0 +1,81 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Restaurant ChatBot</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, sans-serif; background: #f2f2f2; display: flex; justify-content: center; }
+    .chat { width: 100%; max-width: 480px; height: 100vh; display: flex; flex-direction: column; background: #fff; }
+    header { background: #d9480f; color: #fff; padding: 14px; font-weight: bold; text-align: center; }
+    #messages { flex: 1; overflow-y: auto; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .msg { max-width: 80%; padding: 10px 12px; border-radius: 12px; white-space: pre-line; line-height: 1.4; }
+    .bot { background: #eee; align-self: flex-start; }
+    .user { background: #d9480f; color: #fff; align-self: flex-end; }
+    .pay { display: inline-block; margin-top: 10px; padding: 10px 16px; background: #0a9d58; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold; }
+    form { display: flex; gap: 8px; padding: 10px; border-top: 1px solid #ddd; }
+    input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; }
+    button { padding: 10px 16px; background: #d9480f; color: #fff; border: 0; border-radius: 8px; font-size: 16px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="chat">
+    <header>Restaurant ChatBot</header>
+    <div id="messages"></div>
+    <form id="form">
+      <input id="input" type="text" inputmode="numeric" placeholder="Type a number..." autocomplete="off" />
+      <button type="submit">Send</button>
+    </form>
+  </div>
+
+  <script>
+    const messages = document.getElementById("messages");
+    const form = document.getElementById("form");
+    const input = document.getElementById("input");
+
+    function addMessage(text, who, payUrl) {
+      const div = document.createElement("div");
+      div.className = "msg " + who;
+      div.textContent = text;
+      if (payUrl) {
+        div.appendChild(document.createElement("br"));
+        const a = document.createElement("a");
+        a.href = payUrl;
+        a.className = "pay";
+        a.textContent = "Pay now";
+        div.appendChild(a);
+      }
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    async function start() {
+      const res = await fetch("/api/start");
+      const data = await res.json();
+      addMessage(data.reply, "bot");
+    }
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      addMessage(text, "user");
+      input.value = "";
+      try {
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text }),
+        });
+        const data = await res.json();
+        addMessage(data.reply, "bot", data.payUrl);
+      } catch (err) {
+        addMessage("Something went wrong. Please try again.", "bot");
+      }
+    });
+
+    start();
+  </script>
+</body>
+</html>
